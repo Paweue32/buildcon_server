@@ -5,9 +5,12 @@
 #include <map>
 #include <set>
 #include <queue>
+#include <filesystem>
 #include <http/httplib.h>
 #include <boost/json.hpp>
 #include "env.cpp"
+
+namespace fs = std::filesystem;
 
 std::map<std::string, std::vector<std::string>> dependency_graph;
 std::map<std::string, std::string> master_pack;
@@ -106,6 +109,46 @@ int main(int argc, char **argv) {
             res.set_content("4", "application/json");
         }
     });
+
+
+	svr.Post("/download", [](const httplib::Request& req, httplib::Response& res) {
+		if(req.get_header_value("Content-Type") != "application/json") {
+			res.status = 400;
+			res.set_content("5", "application/json");
+			return;
+		}
+
+		try {
+			boost::json::value received_data = boost::json::parse(req.body);
+
+			if(!received_data.is_object()) {
+				res.status = 400;
+				res.set_content("6", "application/json");
+				return;
+			}
+
+			boost::json::object received_content = received_data.as_object();
+			if(received_content.count("item") && received_content["item"].is_string() && dependency_graph.count(std::string(received_content["item"].as_string()))) {
+				fs::path file_to_stream(std::string("../") + std::string(received_content["item"].as_string()) + ".tar.gz");
+
+				if(!fs::exists(file_to_stream)) {
+					res.status = 400;
+					res.set_content("7", "application/json");
+				}
+
+				res.status = 200;
+				res.set_file_content(file_to_stream.string(), "application/gzip");
+			}
+			else {
+				res.status = 400;
+				res.set_content("8", "application/json");
+			}
+		} catch(...) {
+			res.status = 400;
+			res.set_content("9", "application/json");
+		}
+	});
+
 
 	std::cout << "Listening on https://localhost:443" << std::endl;
 	svr.listen("0.0.0.0", 443);
