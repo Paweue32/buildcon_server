@@ -2,4 +2,6 @@
  "httplib" : [],
  "openssl" : [],
  "gtest" : [],
+ "glfw" : [],
+ "glew" : [],
  "gmock" : "gtest"}

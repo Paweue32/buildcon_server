@@ -124,6 +124,7 @@ int main(int argc, char **argv) {
 			if(!dependency_graph.count(item_param)) {
 				res.status = 400;
 				res.set_content("6", "application/json");
+				return;
 			}
 			
 			fs::path file_to_stream(std::string("libs/") + item_param + ".tar.gz");
