@@ -105,47 +105,40 @@ int main(int argc, char **argv) {
             }
 
         } catch (...) {
-            res.status = 400;
+            res.status = 500;
             res.set_content("4", "application/json");
         }
     });
 
 
-	svr.Post("/download", [](const httplib::Request& req, httplib::Response& res) {
-		if(req.get_header_value("Content-Type") != "application/json") {
+	svr.Get("/download", [](const httplib::Request& req, httplib::Response& res) {
+		if(!req.has_param("item")) {
 			res.status = 400;
 			res.set_content("5", "application/json");
 			return;
 		}
 
-		try {
-			boost::json::value received_data = boost::json::parse(req.body);
+		std::string item_param = req.get_param_value("item");
 
-			if(!received_data.is_object()) {
+		try {
+			if(!dependency_graph.count(item_param)) {
 				res.status = 400;
 				res.set_content("6", "application/json");
+			}
+			
+			fs::path file_to_stream(std::string("libs/") + item_param + ".tar.gz");
+
+			if(!fs::exists(file_to_stream)) {
+				res.status = 400;
+				res.set_content("7", "application/json");
 				return;
 			}
 
-			boost::json::object received_content = received_data.as_object();
-			if(received_content.count("item") && received_content["item"].is_string() && dependency_graph.count(std::string(received_content["item"].as_string()))) {
-				fs::path file_to_stream(std::string("libs/") + std::string(received_content["item"].as_string()) + ".tar.gz");
-
-				if(!fs::exists(file_to_stream)) {
-					res.status = 400;
-					res.set_content("7", "application/json");
-				}
-
-				res.status = 200;
-				res.set_file_content(file_to_stream.string(), "application/gzip");
-			}
-			else {
-				res.status = 400;
-				res.set_content("8", "application/json");
-			}
+			res.status = 200;
+			res.set_file_content(file_to_stream.string(), "application/gzip");
 		} catch(...) {
-			res.status = 400;
-			res.set_content("9", "application/json");
+			res.status = 500;
+			res.set_content("8", "application/json");
 		}
 	});
 
