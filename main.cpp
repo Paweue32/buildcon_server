@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
 
 			boost::json::object received_content = received_data.as_object();
 			if(received_content.count("item") && received_content["item"].is_string() && dependency_graph.count(std::string(received_content["item"].as_string()))) {
-				fs::path file_to_stream(std::string("../") + std::string(received_content["item"].as_string()) + ".tar.gz");
+				fs::path file_to_stream(std::string("libs/") + std::string(received_content["item"].as_string()) + ".tar.gz");
 
 				if(!fs::exists(file_to_stream)) {
 					res.status = 400;
