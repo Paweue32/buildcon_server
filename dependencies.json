@@ -1,0 +1,5 @@
+{"boost" : [],
+ "httplib" : [],
+ "openssl" : [],
+ "gtest" : [],
+ "gmock" : "gtest"}
