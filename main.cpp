@@ -17,6 +17,26 @@ std::map<std::string, std::string> master_pack;
 void load_dependency_graph();
 
 int main(int argc, char **argv) {
+	// Test accessibility for cert_path and priv_key_path
+	try {
+		std::ifstream test_file_object;
+		
+		test_file_object.open(cert_path);
+		if(!test_file_object.good()) {
+			throw std::runtime_error("test_file_object.good() returned false for cert_path");
+		}
+		test_file_object.close();
+
+		test_file_object.open(priv_key_path);
+		if(!test_file_object.good()) {
+			throw std::runtime_error("test_file_object.good() returned false for priv_key_path");
+		}
+		test_file_object.close();
+	} catch(const std::exception& e) {
+		std::cerr << "Cannot open cert_path or priv_key_path.\nDetails: " << e.what() << std::endl;
+		return EXIT_FAILURE; 
+	}
+
 	// Setup
 	load_dependency_graph();
 	httplib::SSLServer svr(cert_path, priv_key_path);

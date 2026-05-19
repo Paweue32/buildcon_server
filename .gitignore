@@ -2,3 +2,4 @@ env.cpp
 tests/
 libs/
 server
+dependencies.json
