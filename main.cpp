@@ -15,6 +15,7 @@ namespace fs = std::filesystem;
 std::map<std::string, std::vector<std::string>> dependency_graph;
 std::map<std::string, std::string> master_pack;
 void load_dependency_graph();
+void dfs(boost::json::array& package_list, const std::string& vertex, std::set<std::string>& packages_seen);
 
 int main(int argc, char **argv) {
 	// Test accessibility for cert_path and priv_key_path
@@ -63,9 +64,8 @@ int main(int argc, char **argv) {
             if (request_content.count("items") && request_content["items"].is_array()) {
 				boost::json::array request_items = request_content["items"].as_array();
 
-				// Building the output JSON array with BFS
+				// Building the output JSON array  dfs-oriented, topological sort-like function
 				boost::json::array response_items;
-				std::queue<std::string> kolej;
 				std::set<std::string> seen;
 
 				for(const boost::json::value& item: request_items) {
@@ -77,41 +77,16 @@ int main(int argc, char **argv) {
 
 					std::string s_item = std::string(item.as_string());
 					if(master_pack.count(s_item)) {
-						if(seen.count(master_pack[s_item])) {
-							continue;
-						}
-						
-						kolej.push(master_pack[s_item]);
-						seen.insert(master_pack[s_item]);
-						response_items.push_back(boost::json::string(master_pack[std::move(s_item)]));
+						dfs(response_items, master_pack.at(s_item), seen);
 					}
 					else if(dependency_graph.count(s_item)) {
-						if(seen.count(s_item)) {
-							continue;
-						}
-
-						kolej.push(s_item);
-						seen.insert(s_item);
-						response_items.push_back(boost::json::string(std::move(s_item)));
+						dfs(response_items, s_item, seen);
 					}
 					else {
 						res.status = 400;
 						res.set_content("2", "application/json");
 						return;
 					}
-				}
-
-				while(kolej.size()) {
-					for(const std::string& requirement: dependency_graph.at(kolej.front())) {
-						if(seen.count(requirement)) {
-							continue;
-						}
-
-						seen.insert(requirement);
-						kolej.push(requirement);
-						response_items.push_back(boost::json::string(requirement));
-					}
-					kolej.pop();
 				}
 
 
@@ -195,4 +170,18 @@ void load_dependency_graph() {
 		std::cerr << "Error: Failed to load dependencies into memory" << std::endl << e.what() << std::endl;
 		exit(EXIT_FAILURE);
 	}
+}
+
+void dfs(boost::json::array& package_list, const std::string& vertex, std::set<std::string>& packages_seen) {
+	if(packages_seen.count(vertex)) {
+		return;
+	}
+
+	packages_seen.insert(vertex);
+
+	for(const std::string& dep: dependency_graph.at(vertex)) {
+		dfs(package_list, dep, packages_seen);
+	}
+
+	package_list.push_back(boost::json::string(vertex));
 }

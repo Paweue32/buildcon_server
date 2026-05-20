@@ -6,7 +6,7 @@ To learn more about the BuildConnector project, please refer to the repository [
 
 ## Version
 
-- **Version:** 1.0 (Stable)
+- **Version:** 1.1 (Stable)
 
 ## Requirements
 
@@ -17,6 +17,8 @@ To learn more about the BuildConnector project, please refer to the repository [
 - **A certificate and private key for HTTPS** (preferably from a certificate authority)
 
 ## Setup
+
+> ⚠️ **Important:** The `dependencies.json` file, the `libs/` directory, and the `env.cpp` file must all be created in the same directory where your `main.cpp` file is located.
 
 Create a file named `dependencies.json`, where you will store the direct requirements for your packages. The content should be an object where keys are the package names. The values assigned to them can come in 2 forms:
 
@@ -55,7 +57,7 @@ libs/
 
 <br>
 
-Lastly, create an `env.cpp` file where you will store the paths to your server's TLS certificate as well as your private key. The names of the variables must match those in the example below. **Make sure to include this file in your project's** `.gitignore` **file!** 
+Lastly, create an `env.cpp` file where you will store the paths to your server's TLS certificate as well as your private key. The names of the variables must match those in the example below. **Make sure this file is included in your project's** `.gitignore` **file!** 
 
 ### Example
 ```cpp
@@ -67,7 +69,7 @@ const char* priv_key_path = "/path/to/privkey.pem";
 
 ## Compilation
 
-After completing the setup tasks, compile the `main.cpp` file using your preferred compiler, but make sure you use the C++17 standard (or higher). You will need to link against `libboost_json`, `libssl` and `libcrypto`. Even though the last two aren't explicitly included in `main.cpp`, they are required for `yhirose/cpp-httplib`'s https features. Keep in mind that libcrypto is typically bundled with libssl, so you may not need to install it separately. Since `yhirose/cpp-httplib` is a single-file, header-only library, you won't need to link against it, but `httplib.h` needs to be present in one of your system's include directories. If you are including/linking libraries located in non-standard locations, additional flags may be required. The resulting executable's name does not matter.
+After completing the setup tasks, compile the `main.cpp` file using your preferred compiler, but make sure you use the C++17 standard (or higher). You will need to link against `libboost_json`, `libssl` and `libcrypto`. Even though the last two aren't explicitly included in `main.cpp`, they are required for `yhirose/cpp-httplib`'s https features. Keep in mind that `libcrypto` is typically bundled with `libssl`, so you may not need to install it separately. Since `yhirose/cpp-httplib` is a single-file, header-only library, you won't need to link against it, but `httplib.h` needs to be present in one of your system's include directories. If you are including/linking libraries located in non-standard locations, additional flags may be required. The resulting executable's name does not matter.
 
 ### Example
 ```bash
@@ -98,11 +100,11 @@ This API takes a JSON object with the names of packages requested by users. It w
 
 <br>
 
-The output data's format is identical.
+The output data's format is identical, but it guarantees no duplicates and a reverse topological order, which means that for each package, all of its dependencies, if they exist, are located to its left. This ensures that installing the packages from left to right won't cause dependency errors. The server also swaps out sub-packages for their parents.
 ### Example
 ```json
 {
-    "items" : ["gtest", "wt", "openssl", "glew", "boost"]
+    "items" : ["boost", "gtest", "wt", "openssl", "glew"]
 }
 ```
 
