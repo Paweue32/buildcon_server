@@ -1,4 +1,4 @@
-env.cpp
+cert_config.json
 tests/
 libs/
 server

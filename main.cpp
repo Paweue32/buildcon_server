@@ -8,7 +8,6 @@
 #include <filesystem>
 #include <http/httplib.h>
 #include <boost/json.hpp>
-#include "env.cpp"
 
 namespace fs = std::filesystem;
 
@@ -16,10 +15,17 @@ std::map<std::string, std::vector<std::string>> dependency_graph;
 std::map<std::string, std::string> master_pack;
 void load_dependency_graph();
 void dfs(boost::json::array& package_list, const std::string& vertex, std::set<std::string>& packages_seen);
+void run_http_redirect_server();
 
 int main(int argc, char **argv) {
-	// Test accessibility for cert_path and priv_key_path
+	// Obtaining and checking cert_path and priv_key_path
+	std::string cert_path, priv_key_path;
 	try {
+		std::ifstream cert_config("cert_config.json");
+		boost::json::object cert_info = boost::json::parse(cert_config).as_object();
+		cert_path = cert_info["cert_path"].as_string();
+		priv_key_path = cert_info["priv_key_path"].as_string();
+
 		std::ifstream test_file_object;
 		
 		test_file_object.open(cert_path);
@@ -40,7 +46,7 @@ int main(int argc, char **argv) {
 
 	// Setup
 	load_dependency_graph();
-	httplib::SSLServer svr(cert_path, priv_key_path);
+	httplib::SSLServer svr(cert_path.c_str(), priv_key_path.c_str());
 
 	svr.Post("/scout", [](const httplib::Request& req, httplib::Response& res) {
 		// Checking if everything's alright
@@ -138,9 +144,10 @@ int main(int argc, char **argv) {
 		}
 	});
 
-
-	std::cout << "Listening on https://localhost:443" << std::endl;
+	std::cout << "Listening on http://localhost:80 and https://localhost:443" << std::endl;
+	std::thread redirect_thread(run_http_redirect_server);
 	svr.listen("0.0.0.0", 443);
+	redirect_thread.join();
 
 	return EXIT_SUCCESS;
 }
@@ -184,4 +191,25 @@ void dfs(boost::json::array& package_list, const std::string& vertex, std::set<s
 	}
 
 	package_list.push_back(boost::json::string(vertex));
+}
+
+void run_http_redirect_server() {
+	httplib::Server svr;
+
+	auto redirect_handler = [](const httplib::Request& req, httplib::Response& res) {
+		std::string host = req.get_header_value("Host");
+		if(host.empty()) {
+			res.status = 400;
+			res.set_content("9", "application/json");
+			return;
+		}
+
+		std::string redirect_url = "https://" + host + req.path;
+		res.set_redirect(redirect_url, 308);
+	};
+
+	svr.Get(".*", redirect_handler);
+	svr.Post(".*", redirect_handler);
+
+	svr.listen("0.0.0.0", 80);
 }

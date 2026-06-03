@@ -6,7 +6,7 @@ To learn more about the BuildConnector project, please refer to the repository [
 
 ## Version
 
-- **Version:** 1.1 (Stable)
+- **Version:** 1.2 (Stable)
 
 ## Requirements
 
@@ -18,7 +18,7 @@ To learn more about the BuildConnector project, please refer to the repository [
 
 ## Setup
 
-> ⚠️ **Important:** The `dependencies.json` file, the `libs/` directory, and the `env.cpp` file must all be created in the same directory where your `main.cpp` file is located.
+> ⚠️ **Important:** The `dependencies.json` file, the `libs/` directory, and the `cert_config.json` file must all exist in the same directory where your executable file is located.
 
 Create a file named `dependencies.json`, where you will store the direct requirements for your packages. The content should be an object where keys are the package names. The values assigned to them can come in 2 forms:
 
@@ -57,12 +57,14 @@ libs/
 
 <br>
 
-Lastly, create an `env.cpp` file where you will store the paths to your server's TLS certificate as well as your private key. The names of the variables must match those in the example below. **Make sure this file is included in your project's** `.gitignore` **file!** 
+Lastly, create an `cert_config.json` file where you will store the paths to your server's TLS certificate and private key. The names of the keys must match those in the example below. **Make sure this file is included in your project's** `.gitignore` **file!** 
 
 ### Example
-```cpp
-const char* cert_path = "/path/to/cert.pem";
-const char* priv_key_path = "/path/to/privkey.pem";
+```json
+{
+    "cert_path" : "/path/to/cert.pem",
+    "priv_key_path" : "/path/to/privkey.pem"
+}
 ```
 
 <br>
@@ -80,11 +82,13 @@ g++ main.cpp -o server -std=c++17 -lboost_json -lssl -lcrypto
 
 ## Usage
 
-After a successful compilation, run the resulting executable. Keep in mind that if you don't have read access to `cert_path` and `priv_key_path` files, the server will not run properly. Additionally, you may need root/admin privileges to start a server on port 443. Upon a successful launch, the server should print `Listening on https://localhost:443` to standard output.
+After a successful compilation, run the resulting executable. Keep in mind that if you don't have read access to `cert_path` and `priv_key_path` files, the server will not run properly. Additionally, you may need root/admin privileges to start a server on ports 80 and 443. Upon a successful launch, the server should print `Listening on http://localhost:80 and https://localhost:443` to standard output.
 
-**Disclaimer:** the dependency graph is built right after starting the server, so you don't need to recompile `main.cpp` upon changing `dependencies.json`.
+**Disclaimer:** the dependency graph is built right after starting the server, so you don't need to recompile `main.cpp` upon changing `dependencies.json`. The same principle applies when changing `cert_config.json`.
 
-From now on the server will handle two kinds of requests:
+Port 443 houses the https server that processes user requests while port 80 has an http server that simply redirects to 443, preserving the requests in their entirety.
+
+From now on the https server will handle two kinds of requests:
 
 
 ### 1. POST requests on path /scout
@@ -116,5 +120,5 @@ This API takes the name of the package to be downloaded as the `item` parameter.
 
 ### Example
 ```
-https://[server_name/ip]/download?item=[package_name]
+https://[server_name/ip]/download?item=boost
 ```
